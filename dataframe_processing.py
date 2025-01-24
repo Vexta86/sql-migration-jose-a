@@ -14,11 +14,20 @@ def process_workbook(route, quarter):
     df = df.infer_objects()
     replacement_dict = {
         'DBAJO': 'BJ',
+
         'DB': 'B',
+        'DBA': 'B',
+        'DBCO': 'B',
+        'DBACO': 'B',
+        'DBS': 'B',
+        'DBO': 'B',
+
         'DA': 'A',
         'DS': 'S'
-
     }
+    # Apply the trimming and uppercasing to each cell before replacement
+    df = df.map(lambda x: str(x).strip().upper().replace('.', '') if isinstance(x, str) else x)
+
     df.replace(replacement_dict, inplace=True)
 
     # Replace all other values with None
@@ -35,34 +44,44 @@ def extract_data(route, quarter):
     df = pd.read_excel(route, sheet_name=quarter)
 
     data = {
-        'Grado': None,
-        'Grupo': None,
-        'Periodo': None
+        'Grado': '',
+        'Grupo': ''
     }
-    grado_grupo = df.iloc[4, 1]
+    # Search for the cell containing the word "grupo" (case insensitive)
+    found_cells = df.map(
+        lambda x: isinstance(x, str) and 'grupo' in x.lower()
+    )
 
-    if len(grado_grupo.split(': ')) > 1:
-        grado_grupo = grado_grupo.split(': ')[1]
+    # Get the first occurrence of the word "grupo"
+    if found_cells.any().any():
+        df = df[found_cells]
+        df.dropna(axis=1, how='all', inplace=True)
+        df.dropna(axis=0, how='all', inplace=True)
+        cell = df.iloc[0, 0]
+        cell = cell.split()
+        data['Grado'] = cell[1]
+        if len(cell) == 3:
 
-    if len(df.iloc[5, 1].split(': ')) > 1:
-        data['Periodo'] = df.iloc[5, 1].split(': ')[1].strip()
-    else:
-        data['Periodo'] = df.iloc[5, 1]
-    if len(grado_grupo.split()) > 1:
-        data['Grado'] = grado_grupo.split()[0]
-        data['Grupo'] = grado_grupo.split()[1]
-    else:
-        data['Grado'] = grado_grupo.strip()
+            data['Grupo'] = cell[2]
+        if len(cell) > 3:
+
+            data['Grupo'] = '_'.join(cell[2:])
+
     return data
 
 
-def process_df(route):
-    output = []
+def post_to_db(db_connection, route):
+    failed_count = 0
+    successful_count = 0
+    cursor = db_connection.cursor()
+    # El periodo 3 contiene las notas definitivas
     df = process_workbook(route, 2)
     data = extract_data(route, 2)
+
     for index, row in df.iterrows():
         for column in df.columns:
-            estudiante = clean_name(index)
+            print(f'Students added: {successful_count}', end='\r')
+            student_name = clean_name(index)
 
             materia = clean_column_name(column)
 
@@ -72,5 +91,19 @@ def process_df(route):
 
             grupo = data['Grupo']
 
-            output.append((estudiante, materia, nota, grado, grupo))
-    return output
+            year = '2024'
+            try:
+                query = """
+                    INSERT INTO Calificaciones1_11 (Nombre, Cod_asig, Nota, Grado, Grupo, Fecha)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                # cursor.execute(query, (student_name, materia, nota, grado, grupo, year))
+                if not nota:
+                    print(f'Check for student {student_name} at asignatura {materia}')
+                successful_count += 1
+
+            except Exception as e:
+                print('Failed for student', student_name, materia, nota, e)
+                failed_count += 1
+    print(f'\nSuccessful insertions: {successful_count}')
+    print(f'Failed insertions: {failed_count}\n')
