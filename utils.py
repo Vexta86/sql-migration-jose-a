@@ -3,32 +3,54 @@ import re
 
 
 def remove_tildes(text):
-    """Removes the accents of each vowel in a text
+    """Removes the accents of each vowel in a text but preserves the 'ñ'.
 
-    :param str text: the text with vowels with accents
-    :return str: the text without the accents
+    Args:
+        text (str): The text with vowels with accents.
+
+    Returns:
+        str: The text without the accents.
     """
-    # Normalize and remove accents
-    text = ''.join(
-        char for char in unicodedata.normalize('NFD', text)
-        if unicodedata.category(char) != 'Mn'
-    )
-    return text.strip()
+    result = []
+    for char in text:
+        # Preserve 'ñ' and 'Ñ'
+        if char in {'ñ', 'Ñ'}:
+            result.append(char)
+        else:
+            # Normalize and remove accents from other characters
+            decomposed = unicodedata.normalize('NFD', char)
+            filtered = ''.join(c for c in decomposed if unicodedata.category(c) != 'Mn')
+            result.append(filtered)
+    return ''.join(result)
 
 
 def clean_name(name):
-    """Cleans a name by removing numbers and accents.
+    """Cleans a name by removing numbers, accents, truncating after undesired words, and capitalizing words.
 
-    :param str name: The name to be cleaned.
-    :return str: The cleaned name.
+    Args:
+        name (str): The name to be cleaned.
+
+    Returns:
+        str: The cleaned name.
     """
-    # Remove numbers using regex
+    # Remove numbers
     name = re.sub(r'\d+', '', name)
 
     # Remove tildes (accents) from vowels
     name = remove_tildes(name)
 
-    # Return the cleaned name
+    # List of undesired words to truncate from
+    undesired_words = ["nueva", "nuevo", "retirado", "retirada", "desertor", "desertora", "se", '-', 'tuvo']
+    pattern = r'\b(?:' + '|'.join(undesired_words) + r')\b'
+
+    # Truncate everything starting from the first undesired word (case-insensitive)
+    match = re.search(pattern, name, flags=re.IGNORECASE)
+    if match:
+        name = name[:match.start()]
+
+    # Capitalize each word and remove extra spaces
+    name = ' '.join(word.capitalize() for word in name.split())
+
     return name.strip()
 
 
@@ -42,7 +64,7 @@ def clean_column_name(column):
     :return str: The cleaned column name.
     """
     # Replace spaces with underscores
-    column = column.replace(" ", "_")
+    column = column.replace(" ", "_").replace('.','')
 
     # Normalize and remove accents
     column = remove_tildes(column)

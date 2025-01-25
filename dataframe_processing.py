@@ -3,30 +3,28 @@ import pandas as pd
 from utils import clean_name, clean_column_name
 
 
-def process_workbook(route, quarter):
-    df = pd.read_excel(route, sheet_name=quarter)
-
-    df.columns = df.iloc[8].tolist()
-    df = df.iloc[9:, 2:]
-    df = df.loc[:, 'APELLIDOS Y NOMBRES':'Total pérdidas'].iloc[:, :-1]
-    df = df.set_index('APELLIDOS Y NOMBRES')
-
-    df = df.infer_objects()
+def replace_notes(df):
+    # TODO: Check possible variants for notes
     replacement_dict = {
+        ' ': ' ',
         'DBAJO': 'BJ',
+        'DBJO': 'BJ',
 
         'DB': 'B',
         'DBA': 'B',
         'DBCO': 'B',
         'DBACO': 'B',
         'DBS': 'B',
+        'BS': 'B',
+        'DDBS': 'B',
         'DBO': 'B',
+        'DBASICO': 'B',
 
         'DA': 'A',
         'DS': 'S'
     }
-    # Apply the trimming and uppercasing to each cell before replacement
-    df = df.map(lambda x: str(x).strip().upper().replace('.', '') if isinstance(x, str) else x)
+    # Apply the trimming and uppercase to each cell before replacement
+    df = df.map(lambda x: str(x).strip().upper().replace('.', '').replace(' ', '') if isinstance(x, str) else x)
 
     df.replace(replacement_dict, inplace=True)
 
@@ -37,6 +35,20 @@ def process_workbook(route, quarter):
     df.dropna(axis=1, how='all', inplace=True)
     df.dropna(axis=0, how='all', inplace=True)
 
+    return df
+
+
+def process_workbook(route, quarter):
+    df = pd.read_excel(route, sheet_name=quarter)
+
+    df.columns = df.iloc[8].tolist()
+    df = df.iloc[9:, 2:]
+    df = df.loc[:, 'APELLIDOS Y NOMBRES':'Total pérdidas'].iloc[:, :-1]
+    df = df.set_index('APELLIDOS Y NOMBRES')
+
+    df = df.infer_objects()
+    original_df = df
+    df = replace_notes(df)
     return df
 
 
@@ -60,12 +72,8 @@ def extract_data(route, quarter):
         cell = df.iloc[0, 0]
         cell = cell.split()
         data['Grado'] = cell[1]
-        if len(cell) == 3:
-
+        if len(cell) >= 3:
             data['Grupo'] = cell[2]
-        if len(cell) > 3:
-
-            data['Grupo'] = '_'.join(cell[2:])
 
     return data
 
@@ -79,17 +87,17 @@ def post_to_db(db_connection, route):
     data = extract_data(route, 2)
 
     for index, row in df.iterrows():
+        student_name = clean_name(index)
+        grado = clean_column_name(data['Grado'])
+
+        grupo = data['Grupo']
+        # print(f'\n{student_name} from {grado}-{grupo}')
         for column in df.columns:
             print(f'Students added: {successful_count}', end='\r')
-            student_name = clean_name(index)
 
             materia = clean_column_name(column)
 
             nota = row[column]
-
-            grado = clean_column_name(data['Grado'])
-
-            grupo = data['Grupo']
 
             year = '2024'
             try:
@@ -98,8 +106,8 @@ def post_to_db(db_connection, route):
                     VALUES (%s, %s, %s, %s, %s, %s)
                 """
                 # cursor.execute(query, (student_name, materia, nota, grado, grupo, year))
-                if not nota:
-                    print(f'Check for student {student_name} at asignatura {materia}')
+                print(query, (student_name, materia, nota, grado, grupo, year))
+                # print('\t', materia, nota)
                 successful_count += 1
 
             except Exception as e:
