@@ -5,11 +5,9 @@ import re
 def remove_tildes(text):
     """Removes the accents of each vowel in a text but preserves the 'ñ'.
 
-    Args:
-        text (str): The text with vowels with accents.
+    :param str text: The text with vowels with accents.
 
-    Returns:
-        str: The text without the accents.
+    :return str: The text without the accents.
     """
     result = []
     for char in text:
@@ -40,7 +38,7 @@ def clean_name(name):
     name = remove_tildes(name)
 
     # List of undesired words to truncate from
-    undesired_words = ["nueva", "nuevo", "retirado", "retirada", "desertor", "desertora", "se", '-', 'tuvo']
+    undesired_words = ["nueva", "nuevo", "retirado", "retirada", "desertor", "desertora", "se", '-', '- ', 'tuvo', 'paso', 'nvo']
     pattern = r'\b(?:' + '|'.join(undesired_words) + r')\b'
 
     # Truncate everything starting from the first undesired word (case-insensitive)
@@ -48,8 +46,8 @@ def clean_name(name):
     if match:
         name = name[:match.start()]
 
-    # Capitalize each word and remove extra spaces
-    name = ' '.join(word.capitalize() for word in name.split())
+    # Upper case each word and remove extra spaces
+    name = ' '.join(word.upper() for word in name.split())
 
     return name.strip()
 
@@ -64,7 +62,7 @@ def clean_column_name(column):
     :return str: The cleaned column name.
     """
     # Replace spaces with underscores
-    column = column.replace(" ", "_").replace('.','')
+    column = column.replace(" ", "_").replace('.', '')
 
     # Normalize and remove accents
     column = remove_tildes(column)

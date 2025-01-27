@@ -39,4 +39,4 @@ def process_folder(folder_path):
             post_to_db(db_connection, file_path)
 
 
-process_folder("D:\\Projects\\Akros\\joseacevedogomez\\Notas 2024")
+process_folder("D:\\Projects\\Akros\\joseacevedogomez\\Notas 2023 BJ y AC")
