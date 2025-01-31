@@ -2,6 +2,7 @@ import os
 
 import mysql.connector
 
+from databaseCleaning import update_intensidad, insert_intensidad_from_calificaciones, insert_indice_calificaciones
 from dataframe_processing import post_to_db
 
 import os
@@ -20,10 +21,11 @@ db_connection = mysql.connector.connect(
     database=db_name
 )
 
+YEAR = 2018
+
 
 def process_folder(folder_path):
-    """
-    Process all SQL files in a folder and save their processed data as JSON.
+    """Process all SQL files in a folder and save their processed data in the db.
     """
 
     if not os.path.exists(folder_path):
@@ -34,9 +36,18 @@ def process_folder(folder_path):
         file_path = os.path.join(folder_path, file_name)
 
         if os.path.isfile(file_path) and file_name.lower().endswith('.xlsx'):
-            print(f"\nProcessing file: {file_path}")
+            print(f"\n{'-' * 100}")
+            print(f"{file_path}")
+            post_to_db(db_connection, file_path, YEAR)
+            print(f"{file_path}")
 
-            post_to_db(db_connection, file_path)
+
+def update_database():
+
+    insert_intensidad_from_calificaciones(db_connection, YEAR)
+    update_intensidad(db_connection)
+    insert_indice_calificaciones(db_connection, YEAR)
 
 
-process_folder("D:\\Projects\\Akros\\joseacevedogomez\\Notas 2023 BJ y AC")
+process_folder(f"D:\\Projects\\Akros\\joseacevedogomez\\Notas {YEAR}")
+# update_database()

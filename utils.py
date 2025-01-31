@@ -33,12 +33,18 @@ def clean_name(name):
     """
     # Remove numbers
     name = re.sub(r'\d+', '', name)
-
+    name = name.lower().replace('mat.', '')
+    name = name.lower().replace('*', '')
+    name = name.lower().replace('-', '')
+    name = name.lower().replace('.', '')
+    name = name.lower().replace('folio cal.', '')
+    name = name.lower().replace('folio cal', '')
     # Remove tildes (accents) from vowels
     name = remove_tildes(name)
 
     # List of undesired words to truncate from
-    undesired_words = ["nueva", "nuevo", "retirado", "retirada", "desertor", "desertora", "se", '-', '- ', 'tuvo', 'paso', 'nvo']
+    undesired_words = ["nueva", "nuevo", "retirado", "retirada", "desertor", "desertora", "se", '-', '- ', 'tuvo',
+                       'paso', 'nvo', 'tambien', 'inicio', 'inicia', 'segun', ' mat.', 'no promov', 'promov', 'no promovido']
     pattern = r'\b(?:' + '|'.join(undesired_words) + r')\b'
 
     # Truncate everything starting from the first undesired word (case-insensitive)
@@ -62,10 +68,44 @@ def clean_column_name(column):
     :return str: The cleaned column name.
     """
     # Replace spaces with underscores
-    column = column.replace(" ", "_").replace('.', '')
+    column = str(column).lower().strip().replace(" ", "_").replace('.', '')
 
     # Normalize and remove accents
     column = remove_tildes(column)
 
+    # Replace the shortened values to the known values
+    full_names = {
+        'cn': 'c_naturales',
+        'cs': 'ciencias_sociales',
+        'art': 'artistica',
+        'eti': 'etica',
+        'ef': 'educacion_fisica',
+        'rel': 'religion',
+        'lc': 'lengua_castellana',
+        'ing': 'ingles',
+        'mat': 'matematicas',
+        'tec': 'tecnologia',
+        'fil': 'filosofia',
+
+        'qui': 'quimica',
+        'qu': 'quimica',
+        'biol': 'biologia',
+        'fis': 'fisica',
+
+        'soc': 'ciencias_sociales',
+        'ciencias_sociales-ciencias_econ_y_polit': 'ciencias_sociales',
+
+        'cep': 'economia_y_politica',
+        'c_naturales_qca': 'quimica',
+        'mt': 'media_tecnica',
+
+        'pol/econ': 'economia_y_politica',
+        'ciencias_econ_y_polit': 'economia_y_politica',
+
+    }
+
+    if column in full_names.keys():
+        column = full_names[column]
+
     # Convert to lowercase and strip any extra whitespace
-    return column.strip().lower()
+    return column
