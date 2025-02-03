@@ -1,6 +1,6 @@
 import pandas as pd
 
-from utils import clean_name, clean_column_name
+from utils import clean_name, clean_column_name, remove_tildes
 
 
 def convert_number_to_note(number):
@@ -20,6 +20,7 @@ def replace_notes(df):
     replacement_dict = {
 
         'DBAJO': 'BJ',
+        'BAJO': 'BJ',
         'BAJ': 'BJ',
         'DBJO': 'BJ',
         'DAJO': 'BJ',
@@ -34,17 +35,25 @@ def replace_notes(df):
         'DDBS': 'B',
         'DBO': 'B',
         'DBASICO': 'B',
+        'BASICO': 'B',
         'DBAS': 'B',
         'DBSC': 'B',
         'DBSCO': 'B',
         'DBASCO': 'B',
+        'DBASCIO': 'B',
 
         'DA': 'A',
+        'DALTO': 'A',
+        'ALTO': 'A',
+        'DALTOD': 'A',
+
         'DS': 'S',
+        'DSUPERIOR': 'S',
+        'SUPERIOR': 'S',
         'DDS': 'S'
     }
     # Apply the trimming and uppercase to each cell before replacement
-    df = df.map(lambda x: str(x).strip().upper().replace('.', '').replace(' ', '') if isinstance(x, str) else x)
+    df = df.map(lambda x: remove_tildes(x).strip().upper().replace('.', '').replace(',', '').replace(' ', '').replace('-', '') if isinstance(x, str) else x)
 
     df = df.map(lambda x: convert_number_to_note(x) if isinstance(x, float) or isinstance(x, int) else x)
 
@@ -56,28 +65,46 @@ def replace_notes(df):
     df.dropna(axis=1, how='all', inplace=True)
     df.dropna(axis=0, how='all', inplace=True)
 
+    # Drop rows with more than 7 NaN values
+    # Calculate the threshold: total columns minus 8
+    thresh_value = len(df.columns) - 7
+    df.dropna(axis=0, thresh=thresh_value, inplace=True)
+
     return df
 
 
 def process_workbook(route, quarter):
     df = pd.read_excel(route, sheet_name=quarter)
 
-    df.columns = [clean_column_name(col) for col in df.iloc[8].tolist()]
+    # Find the index where 'apellidos_y_nombres' is located
+    header_index = df[df.eq('APELLIDOS Y NOMBRES').any(axis=1)].index[0]
+
+    # Set the column names using the found index
+    df.columns = [clean_column_name(col) for col in df.iloc[header_index].tolist()]
+    df = df.iloc[header_index:, 2:]
+
+    # Set 'apellidos_y_nombres' as the index
     df = df.set_index('apellidos_y_nombres')
-    df = df.iloc[8:, 2:]
+
     try:
         df = df.loc[:, :'total_perdidas'].iloc[:, :-1]
     except KeyError:
         df = df.loc[:, :'tp'].iloc[:, :-1]
 
-
     df = replace_notes(df)
     return df
 
 
-def extract_data(route, quarter):
-    df = pd.read_excel(route, sheet_name=quarter)
+def is_digit_or_float(value):
+    try:
+        float(value)  # Attempt to convert to float
+        return True
+    except (ValueError, TypeError):
+        return False
 
+
+def get_grado_grupo(grado, grupo):
+    possible_groups = ['A', 'B', 'C', 'D', 1, 2, 3, 4]
     numeric_grado = {
         'primero': 1,
         'segundo': 2,
@@ -93,11 +120,32 @@ def extract_data(route, quarter):
         'DÉCIMO': 10,
         'undecimo': 11,
         'once': 11,
+    }
+
+    special_grado = {
         'aceleracion': 'AC',
         'brujula': 'BJ',
         'clei': 'CLEI',
-
     }
+    if grupo in possible_groups and str(grado).isdigit():
+        return int(grado), grupo
+    if grupo in possible_groups and grado in numeric_grado.keys():
+        return numeric_grado[grado], grupo
+    if grupo in possible_groups:
+        return 0, grupo
+    if grado in numeric_grado.keys():
+        return numeric_grado[grado], ''
+    if str(grado).isdigit():
+        return int(grado), ''
+    if grado in special_grado.keys() and is_digit_or_float(grupo):
+        return special_grado[grado], float(grupo)
+    if grado in special_grado.keys():
+        return special_grado[grado], ''
+    return 0, ''
+
+
+def extract_data(route, quarter):
+    df = pd.read_excel(route, sheet_name=quarter)
 
     data = {
         'Grado': 0,
@@ -118,58 +166,81 @@ def extract_data(route, quarter):
         df.dropna(axis=1, how='all', inplace=True)
         df.dropna(axis=0, how='all', inplace=True)
         cell = df.iloc[0, 0]
+        cell = clean_column_name(cell)
         cell = cell.split()
-        grado = clean_column_name(cell[1])
-        possible_groups = ['A', 'B', 'C', 'D', 1, 2, 3, 4]
-        if grado in numeric_grado.keys():
-            data['Grado'] = numeric_grado[grado]
-        else:
-            data['Grado'] = grado
-        if len(cell) >= 3:
-            data['Grupo'] = cell[2]
-        elif isinstance(data['Grado'], int) and route[-6] in possible_groups:
-            data['Grupo'] = route[-6]
+
+        if len(cell) > 2:
+            grado = clean_column_name(cell[1])
+            data['Grado'], data['Grupo'] = get_grado_grupo(grado, cell[2])
+
+    if data['Grado'] == 0 and not data['Grupo']:
+
+        last_str_in_route = (route.split('_')[-1].split('.')[0])
+
+        data['Grado'], data['Grupo'] = get_grado_grupo(last_str_in_route[0], last_str_in_route[-1])
+
+    if data['Grado'] == 0 and not data['Grupo']:
+        last_str_in_route = (route.split()[-1].split('.')[0])
+
+        data['Grado'], data['Grupo'] = get_grado_grupo(last_str_in_route[0], last_str_in_route[-1])
 
     return data
 
 
 def post_to_db(db_connection, route, year):
-    failed_count = 0
-    successful_count = 0
+
     cursor = db_connection.cursor()
 
     # El periodo 3 contiene las notas definitivas
     df = process_workbook(route, -1)
     data = extract_data(route, 0)
 
+    # Initialize counters
+    successful_count = 0
+    failed_count = 0
+
+    # List to store all queries
+    all_queries = []
+
+    # Iterate over the DataFrame
     for index, row in df.iterrows():
         student_name = clean_name(index)
         grado = data['Grado']
-
         grupo = data['Grupo']
+
         print(f'\n\n{student_name} from {grado}-{grupo} {year}')
+
+        # Collect queries for this student
+        queries = []
         for column in df.columns:
-
             materia = column
-
             nota = row[column]
 
-            try:
-                query = """
-                    INSERT INTO Calificaciones1_11 (Nombre, Cod_asig, Nota, Grado, Grupo, Fecha)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """
-
-                if not nota:
-                    raise Exception('NULL')
-                print('\t', materia, nota, end='\t')
-
-                cursor.execute(query, (student_name, materia, nota, grado, grupo, year))
-
-                successful_count += 1
-
-            except Exception as e:
-                print('\t', materia, e, end='\t')
+            if nota:
+                queries.append((student_name, materia, nota, grado, grupo, year))
+                # print(materia, nota, end='\t')
+            else:
                 failed_count += 1
-    print(f'\n\nSuccessful insertions: {successful_count}')
-    print(f'Failed insertions: {failed_count}\n')
+                print(materia, 'NULL', end='\t')
+
+        # Add the queries for this student to the main list
+        all_queries.extend(queries)
+        successful_count += len(queries)
+
+    # Execute all queries at once
+    if all_queries:
+        query = """
+            INSERT INTO Calificaciones1_11 (Nombre, Cod_asig, Nota, Grado, Grupo, Fecha)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        try:
+            cursor.executemany(query, all_queries)
+            db_connection.commit()  # Commit the transaction
+            print(f'\n\nSuccessful insertions: {successful_count}')
+        except Exception as e:
+            db_connection.rollback()  # Rollback in case of failure
+            print(f"\nError inserting data: {e}")
+    else:
+        print("\nNo valid data to insert.")
+
+    print(f'\n\nFailed insertions: {failed_count}\n\n')
