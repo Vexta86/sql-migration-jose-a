@@ -20,15 +20,21 @@ def replace_notes(df):
     replacement_dict = {
 
         'DBAJO': 'BJ',
+        'DBAJOO': 'BJ',
         'BAJO': 'BJ',
+        'BJO': 'BJ',
         'BAJ': 'BJ',
         'DBJO': 'BJ',
         'DAJO': 'BJ',
         'DBJ': 'BJ',
+        'DBAJ': 'BJ',
+        'DBAJOX': 'BJ',
 
         'DB': 'B',
+        'BD': 'B',
         'DBA': 'B',
         'DBCO': 'B',
+        'DBC': 'B',
         'DBACO': 'B',
         'DBS': 'B',
         'BS': 'B',
@@ -41,15 +47,20 @@ def replace_notes(df):
         'DBSCO': 'B',
         'DBASCO': 'B',
         'DBASCIO': 'B',
+        'DBASI': 'B',
+        'BA': 'B',
 
         'DA': 'A',
         'DALTO': 'A',
         'ALTO': 'A',
+        'DALT': 'A',
         'DALTOD': 'A',
 
         'DS': 'S',
+        'DSUP': 'S',
         'DSUPERIOR': 'S',
         'SUPERIOR': 'S',
+        'DSUPERIO': 'S',
         'DDS': 'S'
     }
     # Apply the trimming and uppercase to each cell before replacement
@@ -65,9 +76,9 @@ def replace_notes(df):
     df.dropna(axis=1, how='all', inplace=True)
     df.dropna(axis=0, how='all', inplace=True)
 
-    # Drop rows with more than 7 NaN values
-    # Calculate the threshold: total columns minus 8
-    thresh_value = len(df.columns) - 7
+    # Drop rows with more or equal than half of the column as NaN values
+    # Calculate the threshold: total columns minus half of the columns minus one
+    thresh_value = len(df.columns) - (len(df.columns)//2 - 1)
     df.dropna(axis=0, thresh=thresh_value, inplace=True)
 
     return df
@@ -90,6 +101,10 @@ def process_workbook(route, quarter):
         df = df.loc[:, :'total_perdidas'].iloc[:, :-1]
     except KeyError:
         df = df.loc[:, :'tp'].iloc[:, :-1]
+    try:
+        df = df.loc[:, :'total_ganadas'].iloc[:, :-1]
+    except KeyError:
+        pass
 
     df = replace_notes(df)
     return df
@@ -104,7 +119,7 @@ def is_digit_or_float(value):
 
 
 def get_grado_grupo(grado, grupo):
-    possible_groups = ['A', 'B', 'C', 'D', 1, 2, 3, 4]
+    possible_groups = ['A', 'B', 'C', 'D', 'E', 1, 2, 3, 4]
     numeric_grado = {
         'primero': 1,
         'segundo': 2,
@@ -120,6 +135,7 @@ def get_grado_grupo(grado, grupo):
         'DÉCIMO': 10,
         'undecimo': 11,
         'once': 11,
+        'procesos': 'PB'
     }
 
     special_grado = {
@@ -127,18 +143,22 @@ def get_grado_grupo(grado, grupo):
         'brujula': 'BJ',
         'clei': 'CLEI',
     }
-    if grupo in possible_groups and str(grado).isdigit():
-        return int(grado), grupo
-    if grupo in possible_groups and grado in numeric_grado.keys():
-        return numeric_grado[grado], grupo
-    if grupo in possible_groups:
-        return 0, grupo
+    if grupo.upper() in possible_groups and str(grado).isdigit():
+        return int(grado), grupo.upper()
+    if grupo.upper() in possible_groups and grado in numeric_grado.keys():
+        return numeric_grado[grado], grupo.upper()
+    if grupo.upper() in possible_groups:
+        return 0, grupo.upper()
     if grado in numeric_grado.keys():
         return numeric_grado[grado], ''
     if str(grado).isdigit():
         return int(grado), ''
     if grado in special_grado.keys() and is_digit_or_float(grupo):
-        return special_grado[grado], float(grupo)
+        if float(grupo) > 10:
+            return special_grado[grado], float(grupo) / 10
+        else:
+            return special_grado[grado], int(grupo)
+
     if grado in special_grado.keys():
         return special_grado[grado], ''
     return 0, ''
@@ -162,26 +182,29 @@ def extract_data(route, quarter):
         )
 
     if found_cells.any().any():
+
         df = df[found_cells]
         df.dropna(axis=1, how='all', inplace=True)
         df.dropna(axis=0, how='all', inplace=True)
         cell = df.iloc[0, 0]
         cell = clean_column_name(cell)
-        cell = cell.split()
+        cell = cell.split('_')
 
         if len(cell) > 2:
             grado = clean_column_name(cell[1])
             data['Grado'], data['Grupo'] = get_grado_grupo(grado, cell[2])
+        if len(cell) == 2:
+
+            grado = clean_column_name(cell[1][:-1])
+            grupo = clean_column_name(cell[1][-1])
+            data['Grado'], data['Grupo'] = get_grado_grupo(grado, grupo)
 
     if data['Grado'] == 0 and not data['Grupo']:
-
         last_str_in_route = (route.split('_')[-1].split('.')[0])
-
         data['Grado'], data['Grupo'] = get_grado_grupo(last_str_in_route[0], last_str_in_route[-1])
 
     if data['Grado'] == 0 and not data['Grupo']:
         last_str_in_route = (route.split()[-1].split('.')[0])
-
         data['Grado'], data['Grupo'] = get_grado_grupo(last_str_in_route[0], last_str_in_route[-1])
 
     return data

@@ -35,7 +35,8 @@ def clean_name(name):
     # Remove numbers
     name = re.sub(r'\d+', '', name)
     unwanted_substrings = [
-        'mat.', '*', '-', '.', 'folio cal.', 'folio cal', 'folio'
+        'mat.', '*', '-', '.', 'folio cal.', 'folio cal', 'folio', '(alfabe)', '( en orden alfabetico)',
+        '(ORDEN ALFABE)', 'desarrollo', 'multimedia', '(ORDEN ALFAB)'
     ]
     # Only removes the specified words
     name = name.lower()
@@ -48,7 +49,7 @@ def clean_name(name):
     # List of undesired words to truncate from
     undesired_words = ["nueva", "nuevo", "retirado", "retirada", "desertor", "desertora", "se", '-', '- ', 'tuvo',
                        'paso', 'nvo', 'tambien', 'inicio', 'inicia', 'segun', ' mat.', 'no promov', 'promov', 'no promovido',
-                       'apellidos']
+                       'apellidos', 'no fue', 'cambio']
     pattern = r'\b(?:' + '|'.join(undesired_words) + r')\b'
 
     # Truncate everything starting from the first undesired word (case-insensitive)
@@ -81,34 +82,61 @@ def clean_column_name(column):
     full_names = {
         'cn': 'c_naturales',
         'cnat': 'c_naturales',
+        'ciencias': 'c_naturales',
+
         'cs': 'ciencias_sociales',
+
         'art': 'artistica',
+        'ed_artistica': 'artistica',
+        'artis': 'artistica',
+
         'eti': 'etica',
+        'etica_y_valores': 'etica',
+
         'ef': 'educacion_fisica',
+        'edfisica': 'educacion_fisica',
+        'ed_fisica': 'educacion_fisica',
+        'efi': 'educacion_fisica',
+        'edfis': 'educacion_fisica',
+
         'rel': 'religion',
 
         'lc': 'lengua_castellana',
         'esp': 'lengua_castellana',
 
         'ing': 'ingles',
+        'idioma_extranjero': 'ingles',
+        'idioma_etranjero': 'ingles',
+
         'mat': 'matematicas',
+        'matematica': 'matematicas',
+
         'tec': 'tecnologia',
+
         'fil': 'filosofia',
         'filo': 'filosofia',
 
         'qui': 'quimica',
+        'c_naturales_qca': 'quimica',
         'qu': 'quimica',
+
         'biol': 'biologia',
         'fis': 'fisica',
 
         'soc': 'ciencias_sociales',
+        'ciencias_sociales_': 'ciencias_sociales',
+        'csociales': 'ciencias_sociales',
 
         'cep': 'economia_y_politica',
+        'ciencias_economicas_': 'economia_y_politica',
         'ciencias_sociales-ciencias_econ_y_polit': 'economia_y_politica',
         'ciencias_sociales_ciencias_econ_y_polit': 'economia_y_politica',
-
         'ce_cp': 'economia_y_politica',
-        'c_naturales_qca': 'quimica',
+        'pol/econ': 'economia_y_politica',
+        'ciencias_politicas_y_economicas': 'economia_y_politica',
+        'ciencias_econ_y_polit': 'economia_y_politica',
+        'ce-cp': 'economia_y_politica',
+
         'mt': 'media_tecnica',
         'media_tecnica_dllo_soft': 'media_tecnica',
         'multimedia': 'media_tecnica',
@@ -123,15 +151,13 @@ def clean_column_name(column):
         'media_tecnica__diseño_e_integrac_de_multimedia': 'media_tecnica',
         'media_tecnica_diseño_e_int_multimedia': 'media_tecnica',
 
-        'pol/econ': 'economia_y_politica',
-        'ciencias_politicas_y_economicas': 'economia_y_politica',
-        'ciencias_econ_y_polit': 'economia_y_politica',
-        'ce-cp': 'economia_y_politica',
-
         'psicos': 'psicosexualidad',
         'psi': 'psicosexualidad',
+
         'emp': 'emprendimiento',
-        'emprend': 'emprendimiento'
+        'emprend': 'emprendimiento',
+        'emprendimeinto': 'emprendimiento',
+        'emprendimientoc': 'emprendimiento',
 
     }
 

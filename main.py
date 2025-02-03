@@ -21,7 +21,7 @@ db_connection = mysql.connector.connect(
     database=db_name
 )
 
-YEAR = 2014
+YEAR = 2010
 
 
 def process_folder(folder_path):
