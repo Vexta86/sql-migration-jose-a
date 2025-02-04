@@ -83,6 +83,7 @@ def clean_column_name(column):
         'cn': 'c_naturales',
         'cnat': 'c_naturales',
         'ciencias': 'c_naturales',
+        'ciencias_naturales_ed_ambiental': 'c_naturales',
 
         'cs': 'ciencias_sociales',
 
@@ -92,6 +93,7 @@ def clean_column_name(column):
 
         'eti': 'etica',
         'etica_y_valores': 'etica',
+        'eti_a_y_va_lo_res': 'etica',
 
         'ef': 'educacion_fisica',
         'edfisica': 'educacion_fisica',
@@ -100,11 +102,15 @@ def clean_column_name(column):
         'edfis': 'educacion_fisica',
 
         'rel': 'religion',
+        'reli_gion': 'religion',
 
         'lc': 'lengua_castellana',
         'esp': 'lengua_castellana',
+        'len': 'lengua_castellana',
+        'lcastellanaa': 'lengua_castellana',
 
         'ing': 'ingles',
+        'idioma_extrngero': 'ingles',
         'idioma_extranjero': 'ingles',
         'idioma_etranjero': 'ingles',
 
@@ -112,6 +118,9 @@ def clean_column_name(column):
         'matematica': 'matematicas',
 
         'tec': 'tecnologia',
+        'tecnologia_e_infor': 'tecnologia',
+
+        'artes': 'artes_plasticas',
 
         'fil': 'filosofia',
         'filo': 'filosofia',

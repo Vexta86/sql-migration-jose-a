@@ -2,69 +2,74 @@ import pandas as pd
 
 from utils import clean_name, clean_column_name, remove_tildes
 
+DICT_2008_2009 = {
+    'I': 'INSUFICIENTE',
+    'D': 'DEFICIENTE',
+    'A': 'ACEPTABLE',
+    'S': 'SOBRESALIENTE',
+    'E': 'EXCELENTE'
+}
+
+DICT_2010_2024 = {
+
+    'DBAJO': 'BJ',
+    'DBAJOO': 'BJ',
+    'BAJO': 'BJ',
+    'BJO': 'BJ',
+    'BAJ': 'BJ',
+    'DBJO': 'BJ',
+    'DAJO': 'BJ',
+    'DBJ': 'BJ',
+    'DBAJ': 'BJ',
+    'DBAJOX': 'BJ',
+
+    'DB': 'B',
+    'BD': 'B',
+    'DBA': 'B',
+    'DBCO': 'B',
+    'DBC': 'B',
+    'DBACO': 'B',
+    'DBS': 'B',
+    'BS': 'B',
+    'DDBS': 'B',
+    'DBO': 'B',
+    'DBASICO': 'B',
+    'BASICO': 'B',
+    'DBAS': 'B',
+    'DBSC': 'B',
+    'DBSCO': 'B',
+    'DBASCO': 'B',
+    'DBASCIO': 'B',
+    'DBASI': 'B',
+    'BA': 'B',
+
+    'DA': 'A',
+    'DALTO': 'A',
+    'ALTO': 'A',
+    'DALT': 'A',
+    'DALTOD': 'A',
+
+    'DS': 'S',
+    'DSUP': 'S',
+    'DSUPERIOR': 'S',
+    'SUPERIOR': 'S',
+    'DSUPERIO': 'S',
+    'DDS': 'S'
+}
+
 
 def convert_number_to_note(number):
-    if 3 > number > 0:
-        return 'BJ'
-    if 4 > number >= 3:
-        return 'B'
-    if 5 > number >= 4:
-        return 'A'
-    if number == 5:
-        return 'S'
-    return None
+    return float(number)
 
 
-def replace_notes(df):
+def replace_notes(df, replacement_dict):
     df = df.infer_objects()
-    replacement_dict = {
 
-        'DBAJO': 'BJ',
-        'DBAJOO': 'BJ',
-        'BAJO': 'BJ',
-        'BJO': 'BJ',
-        'BAJ': 'BJ',
-        'DBJO': 'BJ',
-        'DAJO': 'BJ',
-        'DBJ': 'BJ',
-        'DBAJ': 'BJ',
-        'DBAJOX': 'BJ',
-
-        'DB': 'B',
-        'BD': 'B',
-        'DBA': 'B',
-        'DBCO': 'B',
-        'DBC': 'B',
-        'DBACO': 'B',
-        'DBS': 'B',
-        'BS': 'B',
-        'DDBS': 'B',
-        'DBO': 'B',
-        'DBASICO': 'B',
-        'BASICO': 'B',
-        'DBAS': 'B',
-        'DBSC': 'B',
-        'DBSCO': 'B',
-        'DBASCO': 'B',
-        'DBASCIO': 'B',
-        'DBASI': 'B',
-        'BA': 'B',
-
-        'DA': 'A',
-        'DALTO': 'A',
-        'ALTO': 'A',
-        'DALT': 'A',
-        'DALTOD': 'A',
-
-        'DS': 'S',
-        'DSUP': 'S',
-        'DSUPERIOR': 'S',
-        'SUPERIOR': 'S',
-        'DSUPERIO': 'S',
-        'DDS': 'S'
-    }
     # Apply the trimming and uppercase to each cell before replacement
-    df = df.map(lambda x: remove_tildes(x).strip().upper().replace('.', '').replace(',', '').replace(' ', '').replace('-', '') if isinstance(x, str) else x)
+    df = df.map(
+        lambda x: remove_tildes(x).strip().upper().replace('.', '').replace(',', '').replace(' ', '').replace('-',
+                                                                                                              '') if isinstance(
+            x, str) else x)
 
     df = df.map(lambda x: convert_number_to_note(x) if isinstance(x, float) or isinstance(x, int) else x)
 
@@ -78,7 +83,7 @@ def replace_notes(df):
 
     # Drop rows with more or equal than half of the column as NaN values
     # Calculate the threshold: total columns minus half of the columns minus one
-    thresh_value = len(df.columns) - (len(df.columns)//2 - 1)
+    thresh_value = len(df.columns) - (len(df.columns) // 2 - 1)
     df.dropna(axis=0, thresh=thresh_value, inplace=True)
 
     return df
@@ -92,7 +97,7 @@ def process_workbook(route, quarter):
 
     # Set the column names using the found index
     df.columns = [clean_column_name(col) for col in df.iloc[header_index].tolist()]
-    df = df.iloc[header_index:, 2:]
+    df = df.iloc[header_index:]
 
     # Set 'apellidos_y_nombres' as the index
     df = df.set_index('apellidos_y_nombres')
@@ -100,13 +105,21 @@ def process_workbook(route, quarter):
     try:
         df = df.loc[:, :'total_perdidas'].iloc[:, :-1]
     except KeyError:
+        pass
+    try:
         df = df.loc[:, :'tp'].iloc[:, :-1]
+    except KeyError:
+        pass
     try:
         df = df.loc[:, :'total_ganadas'].iloc[:, :-1]
     except KeyError:
         pass
+    try:
+        df = df.loc[:, :'tg'].iloc[:, :-1]
+    except KeyError:
+        pass
 
-    df = replace_notes(df)
+    df = replace_notes(df, DICT_2008_2009)
     return df
 
 
@@ -119,7 +132,7 @@ def is_digit_or_float(value):
 
 
 def get_grado_grupo(grado, grupo):
-    possible_groups = ['A', 'B', 'C', 'D', 'E', 1, 2, 3, 4]
+    possible_groups = ['A', 'B', 'C', 'D', 'E', 'F', 1, 2, 3, 4]
     numeric_grado = {
         'primero': 1,
         'segundo': 2,
@@ -173,12 +186,12 @@ def extract_data(route, quarter):
     }
     # Search for the cell containing the word "grupo" (case-insensitive)
     found_cells = df.map(
-        lambda x: isinstance(x, str) and 'grupo' in x.lower()
+        lambda x: isinstance(x, str) and 'grado' in x.lower()
     )
 
     if not found_cells.any().any():
         found_cells = df.map(
-            lambda x: isinstance(x, str) and 'grado' in x.lower()
+            lambda x: isinstance(x, str) and 'grupo' in x.lower()
         )
 
     if found_cells.any().any():
@@ -192,10 +205,10 @@ def extract_data(route, quarter):
 
         if len(cell) > 2:
             grado = clean_column_name(cell[1])
+
             data['Grado'], data['Grupo'] = get_grado_grupo(grado, cell[2])
         if len(cell) == 2:
-
-            grado = clean_column_name(cell[1][:-1])
+            grado = cell[1][:-1]
             grupo = clean_column_name(cell[1][-1])
             data['Grado'], data['Grupo'] = get_grado_grupo(grado, grupo)
 
@@ -211,7 +224,6 @@ def extract_data(route, quarter):
 
 
 def post_to_db(db_connection, route, year):
-
     cursor = db_connection.cursor()
 
     # El periodo 3 contiene las notas definitivas
@@ -241,7 +253,7 @@ def post_to_db(db_connection, route, year):
 
             if nota:
                 queries.append((student_name, materia, nota, grado, grupo, year))
-                # print(materia, nota, end='\t')
+                print(materia, nota, end='\t')
             else:
                 failed_count += 1
                 print(materia, 'NULL', end='\t')
