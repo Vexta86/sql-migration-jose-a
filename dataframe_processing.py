@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 
 from utils import clean_name, clean_column_name, remove_tildes
@@ -263,19 +265,37 @@ def post_to_db(db_connection, route, year):
         successful_count += len(queries)
 
     # Execute all queries at once
-    if all_queries:
-        query = """
-            INSERT INTO Calificaciones1_11 (Nombre, Cod_asig, Nota, Grado, Grupo, Fecha)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """
-        try:
-            cursor.executemany(query, all_queries)
-            db_connection.commit()  # Commit the transaction
-            print(f'\n\nSuccessful insertions: {successful_count}')
-        except Exception as e:
-            db_connection.rollback()  # Rollback in case of failure
-            print(f"\nError inserting data: {e}")
-    else:
-        print("\nNo valid data to insert.")
+    # if all_queries:
+    #     query = """
+    #         INSERT INTO Calificaciones1_11 (Nombre, Cod_asig, Nota, Grado, Grupo, Fecha)
+    #         VALUES (%s, %s, %s, %s, %s, %s)
+    #     """
+    #     try:
+    #         cursor.executemany(query, all_queries)
+    #         db_connection.commit()  # Commit the transaction
+    #         print(f'\n\nSuccessful insertions: {successful_count}')
+    #     except Exception as e:
+    #         db_connection.rollback()  # Rollback in case of failure
+    #         print(f"\nError inserting data: {e}")
+    # else:
+    #     print("\nNo valid data to insert.")
 
     print(f'\n\nFailed insertions: {failed_count}\n\n')
+
+
+def process_folder_1_11(folder_path, year, connection):
+    """Process all SQL files in a folder and save their processed data in the db.
+    """
+
+    if not os.path.exists(folder_path):
+        print(f"Folder does not exist: {folder_path}")
+        return
+
+    for file_name in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, file_name)
+
+        if os.path.isfile(file_path) and file_name.lower().endswith('.xlsx'):
+            print(f"\n{'-' * 100}")
+            print(f"{file_path}")
+            post_to_db(connection, file_path, year)
+            print(f"{file_path}")

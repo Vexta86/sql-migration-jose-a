@@ -49,7 +49,7 @@ def clean_name(name):
     # List of undesired words to truncate from
     undesired_words = ["nueva", "nuevo", "retirado", "retirada", "desertor", "desertora", "se", '-', '- ', 'tuvo',
                        'paso', 'nvo', 'tambien', 'inicio', 'inicia', 'segun', ' mat.', 'no promov', 'promov', 'no promovido',
-                       'apellidos', 'no fue', 'cambio']
+                       'apellidos', 'no fue', 'cambio', 'educadora', 'profesor', 'docentes', 'grado']
     pattern = r'\b(?:' + '|'.join(undesired_words) + r')\b'
 
     # Truncate everything starting from the first undesired word (case-insensitive)

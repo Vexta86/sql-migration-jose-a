@@ -1,11 +1,12 @@
-import os
-
 import mysql.connector
 
 from databaseCleaning import update_intensidad, insert_intensidad_from_calificaciones, insert_indice_calificaciones
-from dataframe_processing import post_to_db
+from dataframe_processing import post_to_db, process_folder_1_11
 
 import os
+
+from preescolar.preescolar_migration import process_folder_0
+from tecnica.tecnicas_migration import post_to_db_tecnica
 
 # Access environment variables
 db_host = os.getenv("DB_HOST")
@@ -24,30 +25,11 @@ db_connection = mysql.connector.connect(
 YEAR = 2008
 
 
-def process_folder(folder_path):
-    """Process all SQL files in a folder and save their processed data in the db.
-    """
+# path = "D:\\Projects\\Akros\\joseacevedogomez\\tecnicas\\2024_11_A.xlsx"
+path = "D:\\Projects\\Akros\\joseacevedogomez\\preescolar"
 
-    if not os.path.exists(folder_path):
-        print(f"Folder does not exist: {folder_path}")
-        return
+# process_folder_1_11(f"D:\\Projects\\Akros\\joseacevedogomez\\Notas {YEAR}", YEAR, db_connection)
 
-    for file_name in os.listdir(folder_path):
-        file_path = os.path.join(folder_path, file_name)
+# post_to_db_tecnica(db_connection, path)
 
-        if os.path.isfile(file_path) and file_name.lower().endswith('.xlsx'):
-            print(f"\n{'-' * 100}")
-            print(f"{file_path}")
-            post_to_db(db_connection, file_path, YEAR)
-            print(f"{file_path}")
-
-
-def update_database():
-
-    insert_intensidad_from_calificaciones(db_connection, YEAR)
-    update_intensidad(db_connection)
-    insert_indice_calificaciones(db_connection, YEAR)
-
-
-process_folder(f"D:\\Projects\\Akros\\joseacevedogomez\\Notas {YEAR}")
-# update_database()
+process_folder_0(path, db_connection)
